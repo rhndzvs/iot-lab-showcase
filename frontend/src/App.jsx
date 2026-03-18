@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, Route, Routes } from 'react-router-dom'
 import './App.css'
+import { supabase, supabaseConfigurationError } from './supabaseClient'
 
 const THEME_STORAGE_KEY = 'iot-lab-theme'
 
@@ -50,9 +51,19 @@ function LockIcon() {
 
 const TEMPERATURE_THRESHOLD = 31
 const MAX_LOG_ENTRIES = 10
+const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, created_at'
 
 function formatTimestamp(isoString) {
-  return new Date(isoString).toLocaleString([], {
+  if (!isoString) {
+    return '--'
+  }
+
+  const date = new Date(isoString)
+  if (Number.isNaN(date.getTime())) {
+    return '--'
+  }
+
+  return date.toLocaleString([], {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
@@ -65,31 +76,33 @@ function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
 }
 
-function createReading(id, temperature, humidity, timestamp = new Date().toISOString()) {
-  return {
-    id,
-    temperature,
-    humidity,
-    timestamp,
-    status: temperature > TEMPERATURE_THRESHOLD ? 'Alert' : 'Normal',
+function normalizeStatus(status) {
+  if (typeof status !== 'string') {
+    return 'normal'
   }
+
+  return status.trim().toLowerCase() === 'alert' ? 'alert' : 'normal'
 }
 
-function createInitialLogs() {
-  const now = Date.now()
-  const seededReadings = []
-  let temperature = 28.4
-  let humidity = 56
+function formatStatusLabel(status) {
+  return normalizeStatus(status) === 'alert' ? 'Alert' : 'Normal'
+}
 
-  for (let index = 0; index < MAX_LOG_ENTRIES; index += 1) {
-    temperature = clamp(temperature + (Math.random() * 1.6 - 0.6), 24, 36)
-    humidity = clamp(humidity + (Math.random() * 6 - 3), 30, 85)
-
-    const timestamp = new Date(now - (MAX_LOG_ENTRIES - index - 1) * 30_000).toISOString()
-    seededReadings.push(createReading(index + 1, Number(temperature.toFixed(1)), Math.round(humidity), timestamp))
+function mapSensorRow(row) {
+  if (!row) {
+    return null
   }
 
-  return seededReadings.reverse()
+  const temperature = Number(row.temperature)
+  const humidity = Number(row.humidity)
+
+  return {
+    id: row.id ?? row.created_at ?? crypto.randomUUID(),
+    temperature: Number.isFinite(temperature) ? temperature : 0,
+    humidity: Number.isFinite(humidity) ? humidity : 0,
+    timestamp: row.created_at ?? new Date().toISOString(),
+    status: normalizeStatus(row.status),
+  }
 }
 
 function ThemeToggle({ theme, onToggle }) {
@@ -177,32 +190,82 @@ function ShowcasePage() {
 }
 
 function ServerRoomSimulationPage() {
-  const [logs, setLogs] = useState(() => createInitialLogs())
+  const [logs, setLogs] = useState([])
+  const [currentReading, setCurrentReading] = useState(null)
+  const [isLoading, setIsLoading] = useState(() => Boolean(supabase))
+  const [loadingError, setLoadingError] = useState(() => (supabase ? '' : supabaseConfigurationError))
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      setLogs((previousLogs) => {
-        const current = previousLogs[0]
-        const nextId = (current?.id ?? 0) + 1
-        const nextTemperature = clamp(current.temperature + (Math.random() * 2.2 - 0.8), 24, 36)
-        const nextHumidity = clamp(current.humidity + (Math.random() * 7 - 3.5), 30, 85)
+    if (!supabase) {
+      return undefined
+    }
 
-        const nextReading = createReading(
-          nextId,
-          Number(nextTemperature.toFixed(1)),
-          Math.round(nextHumidity),
-        )
+    let isMounted = true
 
-        return [nextReading, ...previousLogs].slice(0, MAX_LOG_ENTRIES)
-      })
-    }, 3500)
+    const fetchInitialData = async () => {
+      const [latestResult, logsResult] = await Promise.all([
+        supabase
+          .from('lab1_sensor_logs')
+          .select(SENSOR_LOG_COLUMNS)
+          .order('created_at', { ascending: false })
+          .limit(1),
+        supabase
+          .from('lab1_sensor_logs')
+          .select(SENSOR_LOG_COLUMNS)
+          .order('created_at', { ascending: false })
+          .limit(MAX_LOG_ENTRIES),
+      ])
+
+      if (!isMounted) {
+        return
+      }
+
+      if (latestResult.error || logsResult.error) {
+        setLoadingError(latestResult.error?.message || logsResult.error?.message || 'Failed to load sensor logs.')
+        setIsLoading(false)
+        return
+      }
+
+      const latestReading = mapSensorRow(latestResult.data?.[0] ?? null)
+      const recentLogs = (logsResult.data ?? [])
+        .map(mapSensorRow)
+        .filter(Boolean)
+
+      setCurrentReading(latestReading)
+      setLogs(recentLogs)
+      setIsLoading(false)
+    }
+
+    fetchInitialData()
+
+    const channel = supabase
+      .channel('lab1_sensor_logs_live_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'lab1_sensor_logs',
+        },
+        (payload) => {
+          const nextReading = mapSensorRow(payload.new)
+
+          if (!nextReading) {
+            return
+          }
+
+          setCurrentReading(nextReading)
+          setLogs((previousLogs) => [nextReading, ...previousLogs].slice(0, MAX_LOG_ENTRIES))
+          setLoadingError('')
+        },
+      )
+      .subscribe()
 
     return () => {
-      window.clearInterval(intervalId)
+      isMounted = false
+      supabase.removeChannel(channel)
     }
   }, [])
-
-  const currentReading = logs[0]
 
   const thresholdProgress = useMemo(() => {
     if (!currentReading) {
@@ -212,8 +275,11 @@ function ServerRoomSimulationPage() {
     return clamp((currentReading.temperature / TEMPERATURE_THRESHOLD) * 100, 0, 100)
   }, [currentReading])
 
-  const isAlert = currentReading.temperature > TEMPERATURE_THRESHOLD
-  const deltaToThreshold = (TEMPERATURE_THRESHOLD - currentReading.temperature).toFixed(1)
+  const isAlert = normalizeStatus(currentReading?.status) === 'alert'
+  const thresholdExceeded = (currentReading?.temperature ?? 0) > TEMPERATURE_THRESHOLD
+  const deltaToThreshold = currentReading
+    ? (TEMPERATURE_THRESHOLD - currentReading.temperature).toFixed(1)
+    : null
 
   return (
     <main className="simulation-page">
@@ -251,8 +317,10 @@ function ServerRoomSimulationPage() {
               </span>
               <h2>Temperature</h2>
             </div>
-            <p className="sensor-card__value">{currentReading.temperature.toFixed(1)}&deg;C</p>
-            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading.timestamp)}</p>
+            <p className="sensor-card__value">
+              {currentReading ? `${currentReading.temperature.toFixed(1)}°C` : '--'}
+            </p>
+            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
           </article>
 
           <article className="sensor-card">
@@ -262,8 +330,8 @@ function ServerRoomSimulationPage() {
               </span>
               <h2>Humidity</h2>
             </div>
-            <p className="sensor-card__value">{currentReading.humidity}%</p>
-            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading.timestamp)}</p>
+            <p className="sensor-card__value">{currentReading ? `${Math.round(currentReading.humidity)}%` : '--'}</p>
+            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
           </article>
         </section>
 
@@ -273,17 +341,31 @@ function ServerRoomSimulationPage() {
             <p>Threshold: {TEMPERATURE_THRESHOLD}&deg;C</p>
           </div>
           <p className="threshold-panel__hint">
-            {currentReading.temperature > TEMPERATURE_THRESHOLD
-              ? `${Math.abs(Number(deltaToThreshold)).toFixed(1)}\u00B0C above threshold`
-              : `${deltaToThreshold}\u00B0C below threshold`}
+            {!currentReading
+              ? 'Awaiting live sensor data...'
+              : thresholdExceeded
+                ? `${Math.abs(Number(deltaToThreshold)).toFixed(1)}°C above threshold`
+                : `${deltaToThreshold}°C below threshold`}
           </p>
           <div className="threshold-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(thresholdProgress)}>
             <span
-              className={`threshold-meter__fill ${isAlert ? 'threshold-meter__fill--alert' : ''}`}
+              className={`threshold-meter__fill ${thresholdExceeded ? 'threshold-meter__fill--alert' : ''}`}
               style={{ width: `${thresholdProgress}%` }}
             />
           </div>
         </section>
+
+        {loadingError && (
+          <p className="threshold-panel__hint" role="status" aria-live="polite">
+            {loadingError}
+          </p>
+        )}
+
+        {isLoading && (
+          <p className="threshold-panel__hint" role="status" aria-live="polite">
+            Loading live sensor data...
+          </p>
+        )}
 
         <section className="logs-panel" aria-labelledby="logs-heading">
           <div className="logs-panel__header">
@@ -302,23 +384,28 @@ function ServerRoomSimulationPage() {
               </thead>
               <tbody>
                 {logs.map((entry) => {
-                  const rowIsAlert = entry.status === 'Alert'
+                  const rowIsAlert = normalizeStatus(entry.status) === 'alert'
 
                   return (
                     <tr key={entry.id}>
                       <td>{entry.id}</td>
                       <td>{formatTimestamp(entry.timestamp)}</td>
                       <td>{entry.temperature.toFixed(1)}&deg;C</td>
-                      <td>{entry.humidity}%</td>
+                      <td>{Math.round(entry.humidity)}%</td>
                       <td>
                         <span className={`status-pill ${rowIsAlert ? 'status-pill--alert' : 'status-pill--normal'}`}>
                           {rowIsAlert && <i className="bx bx-bell" aria-hidden="true" />}
-                          {entry.status}
+                          {formatStatusLabel(entry.status)}
                         </span>
                       </td>
                     </tr>
                   )
                 })}
+                {!logs.length && !isLoading && (
+                  <tr>
+                    <td colSpan={5}>No sensor logs available yet.</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
