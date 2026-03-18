@@ -202,6 +202,16 @@ function ServerRoomSimulationPage({ onNavigate }) {
   const [isLoading, setIsLoading] = useState(() => Boolean(supabase))
   const [showLoadedContent, setShowLoadedContent] = useState(() => !supabase)
   const [loadingError, setLoadingError] = useState(() => (supabase ? '' : supabaseConfigurationError))
+  const [animatedLogId, setAnimatedLogId] = useState(null)
+  const newRowAnimationTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    return () => {
+      if (newRowAnimationTimeoutRef.current) {
+        window.clearTimeout(newRowAnimationTimeoutRef.current)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (!supabase) {
@@ -264,6 +274,17 @@ function ServerRoomSimulationPage({ onNavigate }) {
 
           setCurrentReading(nextReading)
           setLogs((previousLogs) => [nextReading, ...previousLogs].slice(0, MAX_LOG_ENTRIES))
+          setAnimatedLogId(nextReading.id)
+
+          if (newRowAnimationTimeoutRef.current) {
+            window.clearTimeout(newRowAnimationTimeoutRef.current)
+          }
+
+          newRowAnimationTimeoutRef.current = window.setTimeout(() => {
+            setAnimatedLogId(null)
+            newRowAnimationTimeoutRef.current = null
+          }, 1000)
+
           setLoadingError('')
         },
       )
@@ -476,12 +497,26 @@ function ServerRoomSimulationPage({ onNavigate }) {
                     </tr>
                   ))}
                 {!isLoading &&
-                  logs.map((entry) => {
+                  logs.map((entry, index) => {
                     const rowIsAlert = normalizeStatus(entry.status) === 'alert'
+                    const isNewestRow = index === 0
+                    const isAnimatedRow = entry.id === animatedLogId
+                    const rowClassName = [
+                      'content-fade',
+                      showLoadedContent ? 'content-fade--visible' : '',
+                      isAnimatedRow ? 'logs-row--new' : '',
+                    ].filter(Boolean).join(' ')
 
                     return (
-                      <tr key={entry.id} className={`content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
-                        <td>{entry.id}</td>
+                      <tr key={entry.id} className={rowClassName}>
+                        <td>
+                          <span className="logs-table__id-cell">
+                            <span>{entry.id}</span>
+                            {isNewestRow && (
+                              <span key={`new-indicator-${entry.id}`} className="logs-table__new-badge">New</span>
+                            )}
+                          </span>
+                        </td>
                         <td>{formatTimestamp(entry.timestamp)}</td>
                         <td>{entry.temperature.toFixed(1)}&deg;C</td>
                         <td>{Math.round(entry.humidity)}%</td>
