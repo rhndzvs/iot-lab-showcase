@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react'
 import './App.css'
+
+const THEME_STORAGE_KEY = 'iot-lab-theme'
 
 const projects = [
   {
@@ -45,8 +48,44 @@ function LockIcon() {
 }
 
 function App() {
+  const [theme, setTheme] = useState(() => {
+    if (typeof window === 'undefined') {
+      return 'light'
+    }
+
+    const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY)
+    if (savedTheme === 'light' || savedTheme === 'dark') {
+      return savedTheme
+    }
+
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
+  }
+
   return (
     <main className="portfolio">
+      <button
+        type="button"
+        className="theme-toggle"
+        onClick={toggleTheme}
+        aria-label={theme === 'light' ? 'Light mode active' : 'Dark mode active'}
+        aria-pressed={theme === 'dark'}
+        title={theme === 'light' ? 'Light mode active' : 'Dark mode active'}
+      >
+        <i
+          className={`bx theme-toggle__icon ${theme === 'light' ? 'bx-sun' : 'bx-moon'} theme-toggle__icon--${theme}`}
+          aria-hidden="true"
+        />
+      </button>
+
       <section className="portfolio-section" aria-labelledby="portfolio-heading">
         <header className="portfolio-section__header">
           <p className="portfolio-section__eyebrow">Portfolio</p>

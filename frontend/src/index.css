@@ -20,6 +20,20 @@
   --container-max: 1200px;
   --shadow-card: 0 10px 30px rgba(15, 23, 42, 0.08);
   --shadow-card-hover: 0 16px 36px rgba(15, 23, 42, 0.12);
+  --color-toggle-bg: rgba(255, 255, 255, 0.72);
+  --color-toggle-icon: #0f172a;
+}
+
+:root[data-theme='dark'] {
+  --color-bg: #0b1220;
+  --color-surface: #111b2d;
+  --color-text-primary: #e2e8f0;
+  --color-text-secondary: #94a3b8;
+  --color-border: #223047;
+  --shadow-card: 0 10px 30px rgba(2, 6, 23, 0.45);
+  --shadow-card-hover: 0 16px 36px rgba(2, 6, 23, 0.6);
+  --color-toggle-bg: rgba(17, 27, 45, 0.82);
+  --color-toggle-icon: #f8fafc;
 }
 
 * {
@@ -37,6 +51,7 @@ body {
     radial-gradient(circle at 10% 5%, rgba(14, 165, 233, 0.14), transparent 45%),
     radial-gradient(circle at 90% 90%, rgba(20, 184, 166, 0.14), transparent 40%),
     var(--color-bg);
+  transition: background-color 220ms ease, color 220ms ease;
 }
 
 #root {

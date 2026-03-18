@@ -2,6 +2,57 @@
   padding: var(--space-10) var(--space-8);
 }
 
+.theme-toggle {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-toggle-bg);
+  color: var(--color-toggle-icon);
+  backdrop-filter: blur(8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  cursor: pointer;
+  z-index: 40;
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.theme-toggle:hover {
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.theme-toggle__icon {
+  font-size: 20px;
+  line-height: 1;
+  transition: transform 260ms ease, opacity 220ms ease;
+}
+
+.theme-toggle__icon--light {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.theme-toggle__icon--dark {
+  opacity: 1;
+  transform: scale(1) rotate(-12deg);
+}
+
 .portfolio-section {
   max-width: var(--container-max);
   margin: 0 auto;
@@ -200,6 +251,11 @@
 @media (max-width: 640px) {
   .portfolio {
     padding: var(--space-8) var(--space-4);
+  }
+
+  .theme-toggle {
+    top: var(--space-3);
+    right: var(--space-3);
   }
 
   .project-grid {
