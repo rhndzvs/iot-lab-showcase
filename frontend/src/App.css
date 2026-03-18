@@ -27,6 +27,10 @@
     transform 180ms ease;
 }
 
+.theme-toggle--simulation {
+  top: calc((72px - 44px) / 2);
+}
+
 .theme-toggle:hover {
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.15);
   transform: translateY(-1px);
@@ -237,30 +241,54 @@
 }
 
 .simulation-page {
-  padding: var(--space-10) var(--space-8);
+  padding: 0 0 var(--space-10);
 }
 
 .simulation-shell {
   max-width: var(--container-max);
   margin: 0 auto;
+  padding: var(--space-8) var(--space-8) 0;
   display: grid;
   gap: var(--space-6);
 }
 
 .simulation-navbar {
-  display: flex;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  width: 100%;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-4);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
-  padding: var(--space-4) var(--space-6);
+  padding: var(--space-4) calc(var(--space-8) + 56px) var(--space-4) var(--space-8);
 }
 
-.simulation-navbar h1 {
-  font-size: clamp(1.45rem, 2.8vw, 2rem);
+.simulation-navbar__left,
+.simulation-navbar__right {
+  min-width: 0;
+}
+
+.simulation-navbar__left {
+  justify-self: start;
+}
+
+.simulation-navbar__right {
+  justify-self: end;
+}
+
+.simulation-navbar__title {
+  font-size: clamp(1.1rem, 2.3vw, 1.35rem);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .simulation-live {
@@ -269,6 +297,7 @@
   gap: var(--space-2);
   font-weight: 600;
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .simulation-live__dot {
@@ -349,15 +378,27 @@
 }
 
 .sensor-card__icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+.sensor-card__icon i {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.sensor-card__icon--temperature {
   background: rgba(14, 165, 233, 0.14);
   color: var(--color-primary);
-  font-size: 1.25rem;
+}
+
+.sensor-card__icon--humidity {
+  background: rgba(20, 184, 166, 0.16);
+  color: var(--color-secondary);
 }
 
 .sensor-card h2 {
@@ -496,30 +537,49 @@
   background: rgba(239, 68, 68, 0.18);
 }
 
-.simulation-actions {
-  margin-top: var(--space-2);
-}
-
 .simulation-back-link {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 6px;
   min-height: 44px;
-  padding: 0 18px;
+  padding: 0 12px;
   border-radius: var(--radius-md);
-  border: 1px solid var(--color-primary);
-  color: var(--color-primary);
+  border: 1px solid transparent;
+  color: var(--color-text-primary);
   text-decoration: none;
   font-weight: 600;
-  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+  background: transparent;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.simulation-back-link i {
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .simulation-back-link:hover {
   background: rgba(14, 165, 233, 0.12);
+  border-color: rgba(14, 165, 233, 0.2);
+}
+
+.simulation-back-link:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 :root[data-theme='dark'] .simulation-live {
   color: #cbd5e1;
+}
+
+:root[data-theme='dark'] .simulation-navbar {
+  border-bottom-color: rgba(34, 48, 71, 0.95);
+}
+
+:root[data-theme='dark'] .simulation-back-link:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: rgba(56, 189, 248, 0.28);
 }
 
 :root[data-theme='dark'] .system-status__icon {
@@ -562,12 +622,16 @@
   }
 
   .simulation-page {
-    padding: var(--space-8) var(--space-4);
+    padding: 0 0 var(--space-8);
   }
 
   .theme-toggle {
     top: var(--space-3);
     right: var(--space-3);
+  }
+
+  .theme-toggle--simulation {
+    top: calc((68px - 44px) / 2);
   }
 
   .project-grid {
@@ -578,12 +642,47 @@
     padding: var(--space-4);
   }
 
-  .simulation-navbar,
   .system-status,
   .sensor-card,
   .threshold-panel,
   .logs-panel {
     padding: var(--space-4);
+  }
+
+  .simulation-shell {
+    padding: var(--space-6) var(--space-4) 0;
+  }
+
+  .simulation-navbar {
+    min-height: 68px;
+    gap: var(--space-2);
+    padding: var(--space-3) calc(var(--space-4) + 52px) var(--space-3) var(--space-4);
+  }
+
+  .simulation-navbar__title {
+    font-size: clamp(0.9rem, 3.2vw, 1.02rem);
+  }
+
+  .simulation-back-link {
+    min-height: 38px;
+    padding: 0 8px;
+    font-size: 0.8rem;
+  }
+
+  .simulation-back-link span {
+    max-width: 118px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .simulation-live {
+    font-size: 0.8rem;
+  }
+
+  .simulation-live__label {
+    max-width: 92px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .sensor-grid {
@@ -597,14 +696,6 @@
     gap: 6px;
   }
 
-  .simulation-navbar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .simulation-live {
-    align-self: flex-start;
-  }
 }
 
 @keyframes pulse-live {

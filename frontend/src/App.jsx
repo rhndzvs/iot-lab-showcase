@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, Route, Routes } from 'react-router-dom'
+import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import './App.css'
 import { supabase, supabaseConfigurationError } from './supabaseClient'
 
@@ -105,11 +105,13 @@ function mapSensorRow(row) {
   }
 }
 
-function ThemeToggle({ theme, onToggle }) {
+function ThemeToggle({ theme, onToggle, className = '' }) {
+  const classes = ['theme-toggle', className].filter(Boolean).join(' ')
+
   return (
     <button
       type="button"
-      className="theme-toggle"
+      className={classes}
       onClick={onToggle}
       aria-label={theme === 'light' ? 'Light mode active' : 'Dark mode active'}
       aria-pressed={theme === 'dark'}
@@ -283,15 +285,23 @@ function ServerRoomSimulationPage() {
 
   return (
     <main className="simulation-page">
-      <section className="simulation-shell" aria-labelledby="server-room-title">
-        <nav className="simulation-navbar" aria-label="Server room simulation header">
-          <h1 id="server-room-title">Server Room Simulation</h1>
+      <nav className="simulation-navbar" aria-label="Server room simulation header">
+        <div className="simulation-navbar__left">
+          <Link className="simulation-back-link" to="/" aria-label="Back to IoT Lab Showcase">
+            <i className="bx bx-arrow-left" aria-hidden="true" />
+            <span>IoT Lab Showcase</span>
+          </Link>
+        </div>
+        <h1 id="server-room-title" className="simulation-navbar__title">Server Room Simulation</h1>
+        <div className="simulation-navbar__right">
           <div className="simulation-live" aria-live="polite">
             <span className="simulation-live__dot" aria-hidden="true" />
             <span className="simulation-live__label">Live Updates</span>
           </div>
-        </nav>
+        </div>
+      </nav>
 
+      <section className="simulation-shell" aria-labelledby="server-room-title">
         <article
           className={`system-status ${isAlert ? 'system-status--alert' : 'system-status--normal'}`}
           aria-live="polite"
@@ -312,7 +322,7 @@ function ServerRoomSimulationPage() {
         <section className="sensor-grid" aria-label="Live sensor readings">
           <article className="sensor-card">
             <div className="sensor-card__header">
-              <span className="sensor-card__icon" aria-hidden="true">
+              <span className="sensor-card__icon sensor-card__icon--temperature" aria-hidden="true">
                 <i className="bx bx-thermometer" />
               </span>
               <h2>Temperature</h2>
@@ -325,8 +335,8 @@ function ServerRoomSimulationPage() {
 
           <article className="sensor-card">
             <div className="sensor-card__header">
-              <span className="sensor-card__icon" aria-hidden="true">
-                <i className="bx bx-droplet" />
+              <span className="sensor-card__icon sensor-card__icon--humidity" aria-hidden="true">
+                <i className="bx bx-water-drop" />
               </span>
               <h2>Humidity</h2>
             </div>
@@ -410,18 +420,13 @@ function ServerRoomSimulationPage() {
             </table>
           </div>
         </section>
-
-        <div className="simulation-actions">
-          <Link className="simulation-back-link" to="/">
-            Back to IoT Lab Showcase
-          </Link>
-        </div>
       </section>
     </main>
   )
 }
 
 function App() {
+  const location = useLocation()
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') {
       return 'light'
@@ -444,9 +449,13 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
   }
 
+  const themeToggleClassName = location.pathname === '/server-room-simulation'
+    ? 'theme-toggle--simulation'
+    : ''
+
   return (
     <>
-      <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      <ThemeToggle theme={theme} onToggle={toggleTheme} className={themeToggleClassName} />
       <Routes>
         <Route path="/" element={<ShowcasePage />} />
         <Route path="/server-room-simulation" element={<ServerRoomSimulationPage />} />
