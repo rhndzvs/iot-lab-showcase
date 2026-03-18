@@ -6,9 +6,9 @@ const THEME_STORAGE_KEY = 'iot-lab-theme'
 const projects = [
   {
     id: 'featured-lab',
-    title: 'Smart Home Telemetry Lab',
+    title: 'Server Room Simulation',
     description:
-      'A real IoT lab for home automation with live sensor streams, rule-based device control, and dashboard insights.',
+      'A simulated server room monitor using a DHT11 sensor, buzzer, and red LED. When temperature exceeds the threshold, the buzzer sounds, the LED lights up, and a real-time warning is sent to the UI.',
     imageLabel: 'Featured IoT lab preview',
     href: '#',
     isLocked: false,
