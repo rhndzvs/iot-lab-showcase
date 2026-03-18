@@ -1,120 +1,106 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const projects = [
+  {
+    id: 'featured-lab',
+    title: 'Smart Home Telemetry Lab',
+    description:
+      'A real IoT lab for home automation with live sensor streams, rule-based device control, and dashboard insights.',
+    imageLabel: 'Featured IoT lab preview',
+    href: '#',
+    isLocked: false,
+  },
+  {
+    id: 'data-logger',
+    title: 'Sensor Data Logger',
+    description:
+      'Coming soon: a robust edge-to-cloud pipeline for collecting and replaying multi-room sensor histories.',
+    imageLabel: 'Coming soon project placeholder',
+    isLocked: true,
+  },
+  {
+    id: 'analytics-suite',
+    title: 'IoT Analytics Suite',
+    description:
+      'Coming soon: analytics workflows for anomaly detection, trend comparison, and predictive maintenance.',
+    imageLabel: 'Coming soon analytics project placeholder',
+    isLocked: true,
+  },
+]
 
+function LockIcon() {
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+    <svg
+      className="project-card__lock-icon"
+      viewBox="0 0 24 24"
+      role="img"
+      aria-label="Locked project"
+    >
+      <path
+        d="M17 9h-1V7a4 4 0 10-8 0v2H7a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2v-8a2 2 0 00-2-2zm-7-2a2 2 0 114 0v2h-4V7zm3 8.73V17a1 1 0 11-2 0v-1.27a2 2 0 112 0z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+function App() {
+  return (
+    <main className="portfolio">
+      <section className="portfolio-section" aria-labelledby="portfolio-heading">
+        <header className="portfolio-section__header">
+          <p className="portfolio-section__eyebrow">Portfolio</p>
+          <h1 id="portfolio-heading">IoT Lab Showcase</h1>
+          <p className="portfolio-section__description">
+            A focused collection of IoT projects spanning home automation,
+            sensor data logging, and analytics-driven insights.
           </p>
-        </div>
-        <button
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+        </header>
 
-      <div className="ticks"></div>
+        <div className="project-grid">
+          {projects.map((project) => {
+            const cardClassName = `project-card${project.isLocked ? ' project-card--locked' : ''}`
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
+            if (project.isLocked) {
+              return (
+                <article
+                  className={cardClassName}
+                  key={project.id}
+                  aria-disabled="true"
                 >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
+                  <div className="project-card__image" role="img" aria-label={project.imageLabel}>
+                    <span className="project-card__badge">
+                      <LockIcon />
+                      Coming Soon
+                    </span>
+                  </div>
+                  <div className="project-card__body">
+                    <h2>{project.title}</h2>
+                    <p>{project.description}</p>
+                  </div>
+                </article>
+              )
+            }
+
+            return (
+              <article className={cardClassName} key={project.id}>
+                <a className="project-card__link" href={project.href}>
+                  <div className="project-card__image" role="img" aria-label={project.imageLabel}>
+                    <span className="project-card__badge project-card__badge--live">
+                      Featured Lab
+                    </span>
+                  </div>
+                  <div className="project-card__body">
+                    <h2>{project.title}</h2>
+                    <p>{project.description}</p>
+                  </div>
+                </a>
+              </article>
+            )
+          })}
         </div>
       </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    </main>
   )
 }
 
