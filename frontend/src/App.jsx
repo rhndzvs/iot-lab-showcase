@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import './App.css'
 import { supabase, supabaseConfigurationError } from './supabaseClient'
 
@@ -52,6 +52,7 @@ function LockIcon() {
 const TEMPERATURE_THRESHOLD = 31
 const MAX_LOG_ENTRIES = 10
 const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, created_at'
+const PAGE_TRANSITION_DURATION_MS = 240
 
 function formatTimestamp(isoString) {
   if (!isoString) {
@@ -125,7 +126,7 @@ function ThemeToggle({ theme, onToggle, className = '' }) {
   )
 }
 
-function ShowcasePage() {
+function ShowcasePage({ onNavigate }) {
   return (
     <main className="portfolio">
       <section className="portfolio-section" aria-labelledby="portfolio-heading">
@@ -171,7 +172,11 @@ function ShowcasePage() {
 
             return (
               <article className={cardClassName} key={project.id}>
-                <Link className="project-card__link" to={project.href}>
+                <Link
+                  className="project-card__link"
+                  to={project.href}
+                  onClick={(event) => onNavigate(event, project.href)}
+                >
                   <div className="project-card__image" role="img" aria-label={project.imageLabel}>
                     <span className="project-card__badge project-card__badge--live">
                       Featured Lab
@@ -191,10 +196,11 @@ function ShowcasePage() {
   )
 }
 
-function ServerRoomSimulationPage() {
+function ServerRoomSimulationPage({ onNavigate }) {
   const [logs, setLogs] = useState([])
   const [currentReading, setCurrentReading] = useState(null)
   const [isLoading, setIsLoading] = useState(() => Boolean(supabase))
+  const [showLoadedContent, setShowLoadedContent] = useState(() => !supabase)
   const [loadingError, setLoadingError] = useState(() => (supabase ? '' : supabaseConfigurationError))
 
   useEffect(() => {
@@ -269,6 +275,18 @@ function ServerRoomSimulationPage() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!isLoading) {
+      const frame = window.requestAnimationFrame(() => {
+        setShowLoadedContent(true)
+      })
+
+      return () => window.cancelAnimationFrame(frame)
+    }
+
+    return undefined
+  }, [isLoading])
+
   const thresholdProgress = useMemo(() => {
     if (!currentReading) {
       return 0
@@ -287,7 +305,12 @@ function ServerRoomSimulationPage() {
     <main className="simulation-page">
       <nav className="simulation-navbar" aria-label="Server room simulation header">
         <div className="simulation-navbar__left">
-          <Link className="simulation-back-link" to="/" aria-label="Back to IoT Lab Showcase">
+          <Link
+            className="simulation-back-link"
+            to="/"
+            onClick={(event) => onNavigate(event, '/')}
+            aria-label="Back to IoT Lab Showcase"
+          >
             <i className="bx bx-arrow-left" aria-hidden="true" />
             <span>IoT Lab Showcase</span>
           </Link>
@@ -320,49 +343,98 @@ function ServerRoomSimulationPage() {
         </article>
 
         <section className="sensor-grid" aria-label="Live sensor readings">
-          <article className="sensor-card">
-            <div className="sensor-card__header">
-              <span className="sensor-card__icon sensor-card__icon--temperature" aria-hidden="true">
-                <i className="bx bx-thermometer" />
-              </span>
-              <h2>Temperature</h2>
-            </div>
-            <p className="sensor-card__value">
-              {currentReading ? `${currentReading.temperature.toFixed(1)}°C` : '--'}
-            </p>
-            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
-          </article>
+          {isLoading ? (
+            <>
+              <article className="sensor-card sensor-card--skeleton" aria-hidden="true">
+                <div className="sensor-card__header">
+                  <span className="skeleton-block skeleton-block--circle" />
+                  <span className="skeleton-block skeleton-block--heading" />
+                </div>
+                <p className="sensor-card__value">
+                  <span className="skeleton-block skeleton-block--value" />
+                </p>
+                <p className="sensor-card__meta">
+                  <span className="skeleton-block skeleton-block--meta" />
+                </p>
+              </article>
 
-          <article className="sensor-card">
-            <div className="sensor-card__header">
-              <span className="sensor-card__icon sensor-card__icon--humidity" aria-hidden="true">
-                <i className="bx bx-water-drop" />
-              </span>
-              <h2>Humidity</h2>
-            </div>
-            <p className="sensor-card__value">{currentReading ? `${Math.round(currentReading.humidity)}%` : '--'}</p>
-            <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
-          </article>
+              <article className="sensor-card sensor-card--skeleton" aria-hidden="true">
+                <div className="sensor-card__header">
+                  <span className="skeleton-block skeleton-block--circle" />
+                  <span className="skeleton-block skeleton-block--heading" />
+                </div>
+                <p className="sensor-card__value">
+                  <span className="skeleton-block skeleton-block--value" />
+                </p>
+                <p className="sensor-card__meta">
+                  <span className="skeleton-block skeleton-block--meta" />
+                </p>
+              </article>
+            </>
+          ) : (
+            <>
+              <article className={`sensor-card content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
+                <div className="sensor-card__header">
+                  <span className="sensor-card__icon sensor-card__icon--temperature" aria-hidden="true">
+                    <i className="bx bx-thermometer" />
+                  </span>
+                  <h2>Temperature</h2>
+                </div>
+                <p className="sensor-card__value">
+                  {currentReading ? `${currentReading.temperature.toFixed(1)}°C` : '--'}
+                </p>
+                <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
+              </article>
+
+              <article className={`sensor-card content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
+                <div className="sensor-card__header">
+                  <span className="sensor-card__icon sensor-card__icon--humidity" aria-hidden="true">
+                    <i className="bx bx-water-drop" />
+                  </span>
+                  <h2>Humidity</h2>
+                </div>
+                <p className="sensor-card__value">{currentReading ? `${Math.round(currentReading.humidity)}%` : '--'}</p>
+                <p className="sensor-card__meta">Last updated: {formatTimestamp(currentReading?.timestamp)}</p>
+              </article>
+            </>
+          )}
         </section>
 
         <section className="threshold-panel" aria-label="Temperature threshold indicator">
-          <div className="threshold-panel__row">
-            <h2>Threshold Indicator</h2>
-            <p>Threshold: {TEMPERATURE_THRESHOLD}&deg;C</p>
-          </div>
-          <p className="threshold-panel__hint">
-            {!currentReading
-              ? 'Awaiting live sensor data...'
-              : thresholdExceeded
-                ? `${Math.abs(Number(deltaToThreshold)).toFixed(1)}°C above threshold`
-                : `${deltaToThreshold}°C below threshold`}
-          </p>
-          <div className="threshold-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(thresholdProgress)}>
-            <span
-              className={`threshold-meter__fill ${thresholdExceeded ? 'threshold-meter__fill--alert' : ''}`}
-              style={{ width: `${thresholdProgress}%` }}
-            />
-          </div>
+          {isLoading ? (
+            <div className="threshold-panel__skeleton" aria-hidden="true">
+              <div className="threshold-panel__row">
+                <span className="skeleton-block skeleton-block--heading" />
+                <span className="skeleton-block skeleton-block--threshold" />
+              </div>
+              <p className="threshold-panel__hint">
+                <span className="skeleton-block skeleton-block--hint" />
+              </p>
+              <div className="threshold-meter threshold-meter--skeleton">
+                <span className="skeleton-block skeleton-block--meter" />
+              </div>
+            </div>
+          ) : (
+            <div className={`content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
+              <div className="threshold-panel__row">
+                <h2>Threshold Indicator</h2>
+                <p>Threshold: {TEMPERATURE_THRESHOLD}&deg;C</p>
+              </div>
+              <p className="threshold-panel__hint">
+                {!currentReading
+                  ? 'Awaiting live sensor data...'
+                  : thresholdExceeded
+                    ? `${Math.abs(Number(deltaToThreshold)).toFixed(1)}°C above threshold`
+                    : `${deltaToThreshold}°C below threshold`}
+              </p>
+              <div className="threshold-meter" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(thresholdProgress)}>
+                <span
+                  className={`threshold-meter__fill ${thresholdExceeded ? 'threshold-meter__fill--alert' : ''}`}
+                  style={{ width: `${thresholdProgress}%` }}
+                />
+              </div>
+            </div>
+          )}
         </section>
 
         {loadingError && (
@@ -393,24 +465,35 @@ function ServerRoomSimulationPage() {
                 </tr>
               </thead>
               <tbody>
-                {logs.map((entry) => {
-                  const rowIsAlert = normalizeStatus(entry.status) === 'alert'
-
-                  return (
-                    <tr key={entry.id}>
-                      <td>{entry.id}</td>
-                      <td>{formatTimestamp(entry.timestamp)}</td>
-                      <td>{entry.temperature.toFixed(1)}&deg;C</td>
-                      <td>{Math.round(entry.humidity)}%</td>
-                      <td>
-                        <span className={`status-pill ${rowIsAlert ? 'status-pill--alert' : 'status-pill--normal'}`}>
-                          {rowIsAlert && <i className="bx bx-bell" aria-hidden="true" />}
-                          {formatStatusLabel(entry.status)}
-                        </span>
-                      </td>
+                {isLoading &&
+                  Array.from({ length: 6 }).map((_, index) => (
+                    <tr key={`logs-skeleton-${index}`} className="logs-row--skeleton" aria-hidden="true">
+                      <td><span className="skeleton-block skeleton-block--cell-id" /></td>
+                      <td><span className="skeleton-block skeleton-block--cell-time" /></td>
+                      <td><span className="skeleton-block skeleton-block--cell-value" /></td>
+                      <td><span className="skeleton-block skeleton-block--cell-value" /></td>
+                      <td><span className="skeleton-block skeleton-block--cell-pill" /></td>
                     </tr>
-                  )
-                })}
+                  ))}
+                {!isLoading &&
+                  logs.map((entry) => {
+                    const rowIsAlert = normalizeStatus(entry.status) === 'alert'
+
+                    return (
+                      <tr key={entry.id} className={`content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
+                        <td>{entry.id}</td>
+                        <td>{formatTimestamp(entry.timestamp)}</td>
+                        <td>{entry.temperature.toFixed(1)}&deg;C</td>
+                        <td>{Math.round(entry.humidity)}%</td>
+                        <td>
+                          <span className={`status-pill ${rowIsAlert ? 'status-pill--alert' : 'status-pill--normal'}`}>
+                            {rowIsAlert && <i className="bx bx-bell" aria-hidden="true" />}
+                            {formatStatusLabel(entry.status)}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 {!logs.length && !isLoading && (
                   <tr>
                     <td colSpan={5}>No sensor logs available yet.</td>
@@ -427,6 +510,9 @@ function ServerRoomSimulationPage() {
 
 function App() {
   const location = useLocation()
+  const navigate = useNavigate()
+  const transitionTimeoutRef = useRef(null)
+  const [isPageFading, setIsPageFading] = useState(false)
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') {
       return 'light'
@@ -445,6 +531,35 @@ function App() {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme)
   }, [theme])
 
+  useEffect(() => {
+    return () => {
+      if (transitionTimeoutRef.current) {
+        window.clearTimeout(transitionTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleFadeNavigation = (event, targetPath) => {
+    if (targetPath === location.pathname) {
+      return
+    }
+
+    event.preventDefault()
+    setIsPageFading(true)
+
+    if (transitionTimeoutRef.current) {
+      window.clearTimeout(transitionTimeoutRef.current)
+    }
+
+    transitionTimeoutRef.current = window.setTimeout(() => {
+      navigate(targetPath)
+      window.requestAnimationFrame(() => {
+        setIsPageFading(false)
+      })
+      transitionTimeoutRef.current = null
+    }, PAGE_TRANSITION_DURATION_MS)
+  }
+
   const toggleTheme = () => {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
   }
@@ -456,11 +571,16 @@ function App() {
   return (
     <>
       <ThemeToggle theme={theme} onToggle={toggleTheme} className={themeToggleClassName} />
-      <Routes>
-        <Route path="/" element={<ShowcasePage />} />
-        <Route path="/server-room-simulation" element={<ServerRoomSimulationPage />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <div
+        className={`route-transition ${isPageFading ? 'route-transition--fade-out' : 'route-transition--fade-in'}`}
+        style={{ '--route-transition-duration': `${PAGE_TRANSITION_DURATION_MS}ms` }}
+      >
+        <Routes>
+          <Route path="/" element={<ShowcasePage onNavigate={handleFadeNavigation} />} />
+          <Route path="/server-room-simulation" element={<ServerRoomSimulationPage onNavigate={handleFadeNavigation} />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
     </>
   )
 }

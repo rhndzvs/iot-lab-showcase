@@ -22,6 +22,8 @@
   --shadow-card-hover: 0 16px 36px rgba(15, 23, 42, 0.12);
   --color-toggle-bg: rgba(255, 255, 255, 0.72);
   --color-toggle-icon: #0f172a;
+  --color-skeleton-base: #dbe4ee;
+  --color-skeleton-highlight: #edf2f7;
 }
 
 :root[data-theme='dark'] {
@@ -34,6 +36,8 @@
   --shadow-card-hover: 0 16px 36px rgba(2, 6, 23, 0.6);
   --color-toggle-bg: rgba(17, 27, 45, 0.82);
   --color-toggle-icon: #f8fafc;
+  --color-skeleton-base: #25344d;
+  --color-skeleton-highlight: #344766;
 }
 
 * {
