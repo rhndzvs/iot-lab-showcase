@@ -74,9 +74,15 @@ function App() {
                       Coming Soon
                     </span>
                   </div>
-                  <div className="project-card__body">
-                    <h2>{project.title}</h2>
-                    <p>{project.description}</p>
+                  <div className="project-card__body" aria-label="Project details pending">
+                    <div className="project-card__placeholder" aria-hidden="true">
+                      <span className="project-card__placeholder-bar project-card__placeholder-bar--title" />
+                      <div className="project-card__placeholder-lines">
+                        <span className="project-card__placeholder-bar project-card__placeholder-bar--line-1" />
+                        <span className="project-card__placeholder-bar project-card__placeholder-bar--line-2" />
+                        <span className="project-card__placeholder-bar project-card__placeholder-bar--line-3" />
+                      </div>
+                    </div>
                   </div>
                 </article>
               )
