@@ -4,6 +4,7 @@ import './App.css'
 import { supabase, supabaseConfigurationError } from './supabaseClient'
 
 const THEME_STORAGE_KEY = 'iot-lab-theme'
+const HOME_INTRO_SESSION_KEY = 'iot-lab-showcase-home-intro-played'
 
 const projects = [
   {
@@ -126,28 +127,55 @@ function ThemeToggle({ theme, onToggle, className = '' }) {
   )
 }
 
+function getHomeIntroMode() {
+  if (typeof window === 'undefined') {
+    return 'full'
+  }
+
+  return window.sessionStorage.getItem(HOME_INTRO_SESSION_KEY) === '1'
+    ? 'cards-only'
+    : 'full'
+}
+
 function ShowcasePage({ onNavigate }) {
+  const [introMode] = useState(getHomeIntroMode)
+
+  useEffect(() => {
+    if (introMode !== 'full') {
+      return
+    }
+
+    window.sessionStorage.setItem(HOME_INTRO_SESSION_KEY, '1')
+  }, [introMode])
+
+  const isFullIntro = introMode === 'full'
+
   return (
     <main className="portfolio">
-      <section className="portfolio-section" aria-labelledby="portfolio-heading">
+      <section
+        className={`portfolio-section ${isFullIntro ? 'portfolio-section--intro-full' : 'portfolio-section--intro-cards-only'}`}
+        aria-labelledby="portfolio-heading"
+      >
         <header className="portfolio-section__header">
           <p className="portfolio-section__eyebrow">Portfolio</p>
-          <h1 id="portfolio-heading">IoT Lab Showcase</h1>
-          <p className="portfolio-section__description">
+          <h1 id="portfolio-heading" className="portfolio-section__title">IoT Lab Showcase</h1>
+          <p className="portfolio-section__description portfolio-section__description--intro">
             A focused collection of IoT projects spanning home automation,
             sensor data logging, and analytics-driven insights.
           </p>
         </header>
 
         <div className="project-grid">
-          {projects.map((project) => {
+          {projects.map((project, index) => {
             const cardClassName = `project-card${project.isLocked ? ' project-card--locked' : ''}`
+            const staggerDelay = `${index * 180}ms`
 
             if (project.isLocked) {
               return (
                 <article
-                  className={cardClassName}
+                  className={`${cardClassName} project-card--intro`}
                   key={project.id}
+                  style={{ '--card-stagger-delay': staggerDelay }}
                   aria-disabled="true"
                 >
                   <div className="project-card__image" role="img" aria-label={project.imageLabel}>
@@ -171,7 +199,11 @@ function ShowcasePage({ onNavigate }) {
             }
 
             return (
-              <article className={cardClassName} key={project.id}>
+              <article
+                className={`${cardClassName} project-card--intro`}
+                key={project.id}
+                style={{ '--card-stagger-delay': staggerDelay }}
+              >
                 <Link
                   className="project-card__link"
                   to={project.href}
