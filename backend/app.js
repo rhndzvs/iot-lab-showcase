@@ -38,13 +38,6 @@ app.post('/api/readings', async (req, res) => {
     })
   }
 
-  if (status !== 'normal' && status !== 'alert') {
-    console.log('[POST /api/readings] Insert failed: invalid status value')
-    return res.status(400).json({
-      error: 'Invalid payload: status must be either "normal" or "alert".',
-    })
-  }
-
   if (!supabase) {
     console.log('[POST /api/readings] Insert failed: missing Supabase env vars')
     return res.status(500).json({
@@ -59,7 +52,6 @@ app.post('/api/readings', async (req, res) => {
         {
           temperature: parsedTemperature,
           humidity: parsedHumidity,
-          status,
           threshold,
         },
       ])
