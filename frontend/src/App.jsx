@@ -50,9 +50,9 @@ function LockIcon() {
   )
 }
 
-const TEMPERATURE_THRESHOLD = 31
+const DEFAULT_TEMPERATURE_THRESHOLD = 31
 const MAX_LOG_ENTRIES = 10
-const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, created_at'
+const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, threshold, created_at'
 const PAGE_TRANSITION_DURATION_MS = 240
 
 function formatTimestamp(isoString) {
@@ -97,11 +97,13 @@ function mapSensorRow(row) {
 
   const temperature = Number(row.temperature)
   const humidity = Number(row.humidity)
+  const threshold = Number(row.threshold)
 
   return {
     id: row.id ?? row.created_at ?? crypto.randomUUID(),
     temperature: Number.isFinite(temperature) ? temperature : 0,
     humidity: Number.isFinite(humidity) ? humidity : 0,
+    threshold: Number.isFinite(threshold) ? threshold : DEFAULT_TEMPERATURE_THRESHOLD,
     timestamp: row.created_at ?? new Date().toISOString(),
     status: normalizeStatus(row.status),
   }
@@ -345,13 +347,14 @@ function ServerRoomSimulationPage({ onNavigate }) {
       return 0
     }
 
-    return clamp((currentReading.temperature / TEMPERATURE_THRESHOLD) * 100, 0, 100)
+    return clamp((currentReading.temperature / currentReading.threshold) * 100, 0, 100)
   }, [currentReading])
 
   const isAlert = normalizeStatus(currentReading?.status) === 'alert'
-  const thresholdExceeded = (currentReading?.temperature ?? 0) > TEMPERATURE_THRESHOLD
+  const activeThreshold = currentReading?.threshold ?? DEFAULT_TEMPERATURE_THRESHOLD
+  const thresholdExceeded = (currentReading?.temperature ?? 0) > activeThreshold
   const deltaToThreshold = currentReading
-    ? (TEMPERATURE_THRESHOLD - currentReading.temperature).toFixed(1)
+    ? (activeThreshold - currentReading.temperature).toFixed(1)
     : null
 
   return (
@@ -471,7 +474,7 @@ function ServerRoomSimulationPage({ onNavigate }) {
             <div className={`content-fade ${showLoadedContent ? 'content-fade--visible' : ''}`}>
               <div className="threshold-panel__row">
                 <h2>Threshold Indicator</h2>
-                <p>Threshold: {TEMPERATURE_THRESHOLD}&deg;C</p>
+                <p>Threshold: {activeThreshold.toFixed(1)}&deg;C</p>
               </div>
               <p className="threshold-panel__hint">
                 {!currentReading
