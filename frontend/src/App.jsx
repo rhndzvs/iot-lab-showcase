@@ -159,7 +159,6 @@ function ShowcasePage({ onNavigate }) {
         aria-labelledby="portfolio-heading"
       >
         <header className="portfolio-section__header">
-          <p className="portfolio-section__eyebrow">Portfolio</p>
           <h1 id="portfolio-heading" className="portfolio-section__title">IoT Lab Showcase</h1>
           <p className="portfolio-section__description portfolio-section__description--intro">
             A focused collection of IoT projects spanning home automation,
@@ -211,11 +210,7 @@ function ShowcasePage({ onNavigate }) {
                   to={project.href}
                   onClick={(event) => onNavigate(event, project.href)}
                 >
-                  <div className="project-card__image" role="img" aria-label={project.imageLabel}>
-                    <span className="project-card__badge project-card__badge--live">
-                      Featured Lab
-                    </span>
-                  </div>
+                  <div className="project-card__image" role="img" aria-label={project.imageLabel}></div>
                   <div className="project-card__body">
                     <h2>{project.title}</h2>
                     <p>{project.description}</p>
