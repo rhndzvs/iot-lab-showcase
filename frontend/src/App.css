@@ -411,6 +411,14 @@
   top: 12px;
   right: calc(12px + var(--code-scrollbar-gutter));
   z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.code-viewer-modal__copy:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .code-viewer-modal__pre {
