@@ -5,6 +5,15 @@ import { supabase, supabaseConfigurationError } from './supabaseClient'
 
 const THEME_STORAGE_KEY = 'iot-lab-theme'
 const HOME_INTRO_SESSION_KEY = 'iot-lab-showcase-home-intro-played'
+const SERVER_ROOM_SIMULATION_PATH = '/server-room-simulation'
+const ARDUINO_SKETCH_PLACEHOLDER = '// Arduino sketch coming soon. Check back later!'
+const arduinoSketchModules = import.meta.glob(
+  '../../arduino/server_room_simulation/server_room_simulation.ino',
+  {
+    query: '?raw',
+    import: 'default',
+  },
+)
 
 const projects = [
   {
@@ -54,6 +63,23 @@ const DEFAULT_TEMPERATURE_THRESHOLD = 31
 const MAX_LOG_ENTRIES = 10
 const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, threshold, created_at'
 const PAGE_TRANSITION_DURATION_MS = 240
+
+async function loadArduinoSketchCode() {
+  const moduleLoaders = Object.values(arduinoSketchModules)
+
+  if (!moduleLoaders.length) {
+    return ARDUINO_SKETCH_PLACEHOLDER
+  }
+
+  try {
+    const loadedCode = await moduleLoaders[0]()
+    const sketchCode = typeof loadedCode === 'string' ? loadedCode : ''
+
+    return sketchCode.trim() ? sketchCode : ARDUINO_SKETCH_PLACEHOLDER
+  } catch {
+    return ARDUINO_SKETCH_PLACEHOLDER
+  }
+}
 
 function formatTimestamp(isoString) {
   if (!isoString) {
@@ -577,7 +603,17 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const transitionTimeoutRef = useRef(null)
+  const sketchCopyTimeoutRef = useRef(null)
+  const sketchCopyToastFadeTimeoutRef = useRef(null)
+  const sketchCopyToastCloseTimeoutRef = useRef(null)
+  const sketchCodeRef = useRef(null)
   const [isPageFading, setIsPageFading] = useState(false)
+  const [isSketchViewerOpen, setIsSketchViewerOpen] = useState(false)
+  const [isSketchLoading, setIsSketchLoading] = useState(false)
+  const [arduinoSketchCode, setArduinoSketchCode] = useState(ARDUINO_SKETCH_PLACEHOLDER)
+  const [isSketchCopied, setIsSketchCopied] = useState(false)
+  const [isSketchCopyToastVisible, setIsSketchCopyToastVisible] = useState(false)
+  const [isSketchCopyToastLeaving, setIsSketchCopyToastLeaving] = useState(false)
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') {
       return 'light'
@@ -601,8 +637,76 @@ function App() {
       if (transitionTimeoutRef.current) {
         window.clearTimeout(transitionTimeoutRef.current)
       }
+
+      if (sketchCopyTimeoutRef.current) {
+        window.clearTimeout(sketchCopyTimeoutRef.current)
+      }
+
+      if (sketchCopyToastFadeTimeoutRef.current) {
+        window.clearTimeout(sketchCopyToastFadeTimeoutRef.current)
+      }
+
+      if (sketchCopyToastCloseTimeoutRef.current) {
+        window.clearTimeout(sketchCopyToastCloseTimeoutRef.current)
+      }
     }
   }, [])
+
+  useEffect(() => {
+    if (location.pathname !== SERVER_ROOM_SIMULATION_PATH) {
+      setIsSketchViewerOpen(false)
+    }
+  }, [location.pathname])
+
+  useEffect(() => {
+    if (!isSketchViewerOpen || location.pathname !== SERVER_ROOM_SIMULATION_PATH) {
+      return
+    }
+
+    let isMounted = true
+    setIsSketchLoading(true)
+
+    loadArduinoSketchCode().then((code) => {
+      if (!isMounted) {
+        return
+      }
+
+      setArduinoSketchCode(code)
+      setIsSketchLoading(false)
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [isSketchViewerOpen, location.pathname])
+
+  useEffect(() => {
+    if (!isSketchViewerOpen) {
+      return undefined
+    }
+
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsSketchViewerOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+
+    return () => {
+      window.removeEventListener('keydown', handleEscape)
+    }
+  }, [isSketchViewerOpen])
+
+  useEffect(() => {
+    if (!isSketchViewerOpen || isSketchLoading || !sketchCodeRef.current) {
+      return
+    }
+
+    if (window.Prism?.highlightElement) {
+      window.Prism.highlightElement(sketchCodeRef.current)
+    }
+  }, [isSketchViewerOpen, isSketchLoading, arduinoSketchCode])
 
   const handleFadeNavigation = (event, targetPath) => {
     if (targetPath === location.pathname) {
@@ -629,20 +733,143 @@ function App() {
     setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'))
   }
 
-  const themeToggleClassName = location.pathname === '/server-room-simulation'
+  const themeToggleClassName = location.pathname === SERVER_ROOM_SIMULATION_PATH
     ? 'theme-toggle--simulation'
     : ''
 
+  const openSketchViewer = () => {
+    setIsSketchCopied(false)
+    setIsSketchViewerOpen(true)
+  }
+
+  const closeSketchViewer = () => {
+    setIsSketchViewerOpen(false)
+  }
+
+  const handleModalBackdropClick = (event) => {
+    if (event.target === event.currentTarget) {
+      closeSketchViewer()
+    }
+  }
+
+  const handleCopySketchCode = async () => {
+    try {
+      await navigator.clipboard.writeText(arduinoSketchCode)
+      setIsSketchCopied(true)
+      setIsSketchCopyToastVisible(true)
+      setIsSketchCopyToastLeaving(false)
+
+      if (sketchCopyTimeoutRef.current) {
+        window.clearTimeout(sketchCopyTimeoutRef.current)
+      }
+
+      if (sketchCopyToastFadeTimeoutRef.current) {
+        window.clearTimeout(sketchCopyToastFadeTimeoutRef.current)
+      }
+
+      if (sketchCopyToastCloseTimeoutRef.current) {
+        window.clearTimeout(sketchCopyToastCloseTimeoutRef.current)
+      }
+
+      sketchCopyTimeoutRef.current = window.setTimeout(() => {
+        setIsSketchCopied(false)
+        sketchCopyTimeoutRef.current = null
+      }, 1800)
+
+      sketchCopyToastFadeTimeoutRef.current = window.setTimeout(() => {
+        setIsSketchCopyToastLeaving(true)
+        sketchCopyToastFadeTimeoutRef.current = null
+      }, 2200)
+
+      sketchCopyToastCloseTimeoutRef.current = window.setTimeout(() => {
+        setIsSketchCopyToastVisible(false)
+        setIsSketchCopyToastLeaving(false)
+        sketchCopyToastCloseTimeoutRef.current = null
+      }, 2520)
+    } catch {
+      setIsSketchCopied(false)
+      setIsSketchCopyToastVisible(false)
+      setIsSketchCopyToastLeaving(false)
+    }
+  }
+
   return (
     <>
+      {location.pathname === SERVER_ROOM_SIMULATION_PATH && (
+        <button
+          type="button"
+          className="theme-toggle theme-toggle--simulation code-viewer-toggle"
+          onClick={openSketchViewer}
+          aria-label="Open Arduino sketch code viewer"
+          title="Open Arduino sketch code viewer"
+        >
+          <i className="bx bx-code-alt theme-toggle__icon" aria-hidden="true" />
+        </button>
+      )}
       <ThemeToggle theme={theme} onToggle={toggleTheme} className={themeToggleClassName} />
+      {isSketchViewerOpen && location.pathname === SERVER_ROOM_SIMULATION_PATH && (
+        <div
+          className="code-viewer-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="code-viewer-title"
+          onClick={handleModalBackdropClick}
+        >
+          <div className="code-viewer-modal__panel">
+            <header className="code-viewer-modal__header">
+              <h2 id="code-viewer-title" className="code-viewer-modal__title">
+                Arduino Sketch — Server Room Simulation
+              </h2>
+              <button
+                type="button"
+                className="code-viewer-modal__close"
+                onClick={closeSketchViewer}
+                aria-label="Close code viewer"
+                title="Close"
+              >
+                <i className="bx bx-x" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="code-viewer-modal__body">
+              <div className="code-viewer-modal__code-shell">
+                <button
+                  type="button"
+                  className="code-viewer-modal__copy"
+                  onClick={handleCopySketchCode}
+                  aria-label={isSketchCopied ? 'Code copied' : 'Copy code'}
+                  title={isSketchCopied ? 'Copied' : 'Copy code'}
+                >
+                  <i className="bx bx-copy" aria-hidden="true" />
+                </button>
+                <pre className="code-viewer-modal__pre">
+                  <code ref={sketchCodeRef} className="language-cpp">
+                    {isSketchLoading
+                      ? '// Loading Arduino sketch...'
+                      : arduinoSketchCode}
+                  </code>
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {isSketchCopyToastVisible && (
+        <div
+          className={`copy-toast ${isSketchCopyToastLeaving ? 'copy-toast--leaving' : 'copy-toast--visible'}`}
+          role="status"
+          aria-live="polite"
+        >
+          <i className="bx bx-check-circle copy-toast__icon" aria-hidden="true" />
+          <span>Code copied to clipboard!</span>
+        </div>
+      )}
       <div
         className={`route-transition ${isPageFading ? 'route-transition--fade-out' : 'route-transition--fade-in'}`}
         style={{ '--route-transition-duration': `${PAGE_TRANSITION_DURATION_MS}ms` }}
       >
         <Routes>
           <Route path="/" element={<ShowcasePage onNavigate={handleFadeNavigation} />} />
-          <Route path="/server-room-simulation" element={<ServerRoomSimulationPage onNavigate={handleFadeNavigation} />} />
+          <Route path={SERVER_ROOM_SIMULATION_PATH} element={<ServerRoomSimulationPage onNavigate={handleFadeNavigation} />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
