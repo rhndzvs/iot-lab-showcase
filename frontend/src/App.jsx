@@ -63,6 +63,7 @@ const DEFAULT_TEMPERATURE_THRESHOLD = 31
 const MAX_LOG_ENTRIES = 10
 const SENSOR_LOG_COLUMNS = 'id, temperature, humidity, status, threshold, created_at'
 const PAGE_TRANSITION_DURATION_MS = 240
+const SKETCH_MODAL_ANIMATION_DURATION_MS = 230
 
 async function loadArduinoSketchCode() {
   const moduleLoaders = Object.values(arduinoSketchModules)
@@ -603,12 +604,14 @@ function App() {
   const location = useLocation()
   const navigate = useNavigate()
   const transitionTimeoutRef = useRef(null)
+  const sketchViewerCloseTimeoutRef = useRef(null)
   const sketchCopyTimeoutRef = useRef(null)
   const sketchCopyToastFadeTimeoutRef = useRef(null)
   const sketchCopyToastCloseTimeoutRef = useRef(null)
   const sketchCodeRef = useRef(null)
   const [isPageFading, setIsPageFading] = useState(false)
   const [isSketchViewerOpen, setIsSketchViewerOpen] = useState(false)
+  const [isSketchViewerClosing, setIsSketchViewerClosing] = useState(false)
   const [isSketchLoading, setIsSketchLoading] = useState(false)
   const [arduinoSketchCode, setArduinoSketchCode] = useState(ARDUINO_SKETCH_PLACEHOLDER)
   const [isSketchCopied, setIsSketchCopied] = useState(false)
@@ -638,6 +641,10 @@ function App() {
         window.clearTimeout(transitionTimeoutRef.current)
       }
 
+      if (sketchViewerCloseTimeoutRef.current) {
+        window.clearTimeout(sketchViewerCloseTimeoutRef.current)
+      }
+
       if (sketchCopyTimeoutRef.current) {
         window.clearTimeout(sketchCopyTimeoutRef.current)
       }
@@ -655,6 +662,12 @@ function App() {
   useEffect(() => {
     if (location.pathname !== SERVER_ROOM_SIMULATION_PATH) {
       setIsSketchViewerOpen(false)
+      setIsSketchViewerClosing(false)
+
+      if (sketchViewerCloseTimeoutRef.current) {
+        window.clearTimeout(sketchViewerCloseTimeoutRef.current)
+        sketchViewerCloseTimeoutRef.current = null
+      }
     }
   }, [location.pathname])
 
@@ -738,12 +751,32 @@ function App() {
     : ''
 
   const openSketchViewer = () => {
+    if (sketchViewerCloseTimeoutRef.current) {
+      window.clearTimeout(sketchViewerCloseTimeoutRef.current)
+      sketchViewerCloseTimeoutRef.current = null
+    }
+
     setIsSketchCopied(false)
+    setIsSketchViewerClosing(false)
     setIsSketchViewerOpen(true)
   }
 
   const closeSketchViewer = () => {
-    setIsSketchViewerOpen(false)
+    if (!isSketchViewerOpen || isSketchViewerClosing) {
+      return
+    }
+
+    setIsSketchViewerClosing(true)
+
+    if (sketchViewerCloseTimeoutRef.current) {
+      window.clearTimeout(sketchViewerCloseTimeoutRef.current)
+    }
+
+    sketchViewerCloseTimeoutRef.current = window.setTimeout(() => {
+      setIsSketchViewerOpen(false)
+      setIsSketchViewerClosing(false)
+      sketchViewerCloseTimeoutRef.current = null
+    }, SKETCH_MODAL_ANIMATION_DURATION_MS)
   }
 
   const handleModalBackdropClick = (event) => {
@@ -809,7 +842,7 @@ function App() {
       <ThemeToggle theme={theme} onToggle={toggleTheme} className={themeToggleClassName} />
       {isSketchViewerOpen && location.pathname === SERVER_ROOM_SIMULATION_PATH && (
         <div
-          className="code-viewer-modal"
+          className={`code-viewer-modal ${isSketchViewerClosing ? 'code-viewer-modal--closing' : 'code-viewer-modal--opening'}`}
           role="dialog"
           aria-modal="true"
           aria-labelledby="code-viewer-title"
