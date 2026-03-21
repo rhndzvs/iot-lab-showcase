@@ -9,7 +9,7 @@ const char* password = "YOUR_WIFI_PASSWORD";
 
 // Replace with your computer's local WiFi IP running Express backend
 // Example: 192.168.1.10
-const char* serverIp = "0.0.0.0";
+const char* serverIp = "YOUR_SERVER_IP_ADDRESS";
 const int serverPort = 3000;
 const char* endpoint = "/api/readings";
 
