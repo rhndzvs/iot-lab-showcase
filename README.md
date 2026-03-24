@@ -33,9 +33,9 @@ iot-lab-showcase/
 | Lab Number | Lab Name | Status | Description |
 | --- | --- | --- | --- |
 | 01 | Server Room Simulation | Active | Simulated server room monitor using a DHT11 sensor, buzzer, and red LED. Alerts are triggered when temperature exceeds the configured threshold. |
-| 02 | Smart Home Automation Panel | Coming Soon | TBA |
-| 03 | Multi-Sensor Data Logger | Coming Soon | TBA |
-| 04 | IoT Analytics and Insights | Coming Soon | TBA |
+| 02 | TBA | Coming Soon | TBA |
+| 03 | TBA | Coming Soon | TBA |
+| 04 | TBA | Coming Soon | TBA |
 
 ## Tech Stack
 
@@ -55,13 +55,6 @@ iot-lab-showcase/
 
 - Supabase PostgreSQL
 - Supabase Realtime
-
-### Hardware
-
-- Arduino Uno WiFi R4
-- DHT11 temperature and humidity sensor
-- Piezo buzzer
-- Red LED
 
 ## Getting Started
 
