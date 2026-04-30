@@ -22,9 +22,11 @@ Live site: **[Add your deployed URL here]**
 
 ```text
 iot-lab-showcase/
-├── frontend/   # Vite + React portfolio UI and dashboard views
-├── backend/    # Express API for receiving and storing IoT readings
-├── arduino/    # Arduino sketches for IoT lab hardware simulations
+├── web/        # Vite + React portfolio UI and dashboard views
+├── labs/
+│   └── lab-01/
+│       ├── backend/  # Express API for receiving and storing IoT readings
+│       └── arduino/  # Arduino sketches for IoT lab hardware simulations
 └── README.md   # Project documentation and setup guide
 ```
 
@@ -61,11 +63,11 @@ iot-lab-showcase/
 ### 1) Set Up the Frontend
 
 ```bash
-cd frontend
+cd web
 npm install
 ```
 
-Create a `.env` file inside `frontend/` and add:
+Create a `.env` file inside `web/` and add:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
@@ -81,11 +83,11 @@ npm run dev
 ### 2) Set Up the Backend
 
 ```bash
-cd backend
+cd labs/lab-01/backend
 npm install
 ```
 
-Create a `.env` file inside `backend/` and add:
+Create a `.env` file inside `labs/lab-01/backend/` and add:
 
 ```env
 PORT=3000
@@ -101,7 +103,7 @@ node app.js
 
 ### 3) Upload the Arduino Sketch
 
-1. Navigate to the relevant lab folder inside `arduino/`.
+1. Navigate to the relevant lab folder inside `labs/lab-01/arduino/`.
 2. Open the `.ino` sketch file that matches the folder name in the Arduino IDE.
 3. Update network and backend connection settings in the sketch:
    - `ssid`
@@ -114,7 +116,7 @@ node app.js
 
 If you want to replicate the physical build, check the pin configuration and wiring notes in:
 
-- `arduino/server_room_simulation/README.md`
+- `labs/lab-01/arduino/server_room_simulation/README.md`
 
 This file contains the full wiring table and breadboard setup guide for replicating the hardware.
 

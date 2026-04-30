@@ -6,7 +6,7 @@ This template provides a minimal setup to get React working in Vite with HMR and
 
 The Server Room Simulation dashboard reads live data from Supabase table `lab1_sensor_logs`.
 
-1. Create a local environment file in the frontend root (`.env`)
+1. Create a local environment file in the web root (`.env`)
 2. Add the required keys:
 
 ```env
